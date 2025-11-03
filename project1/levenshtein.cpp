@@ -7,7 +7,6 @@
 #include <unordered_set>
 #include <iomanip>
 #include <cctype>
-
 using namespace std;
 
 const unordered_set<string> stopwords = {
@@ -63,7 +62,7 @@ string normalizeText(const string& text) {
     return result;
 }
 
-int levenshteinDistance(const string& s, const string& t) {
+double levenshteinDistance(const string& s, const string& t) {
     const int m = s.size();
     const int n = t.size();
 
@@ -94,12 +93,14 @@ int levenshteinDistance(const string& s, const string& t) {
     return prev[len1];
 }
 
-double calculateLevenshteinSimilarity(const string& s, const string& t) {
+pair<double, double> calculateLevenshteinSimilarity(const string& s, const string& t) {
     int maxLen = max(s.size(), t.size());
-    if (maxLen == 0) return 100.0;
-    int dist = levenshteinDistance(s, t);
+    if (maxLen == 0) return {100.0, 0.0};
+
+    double dist = levenshteinDistance(s, t);
     double sim = (1.0 - static_cast<double>(dist) / maxLen) * 100.0;
-    return max(0.0, sim);
+    if (sim < 0) sim = 0.0;
+    return {sim, dist};
 }
 
 void search_in_file(const string& file1, const string& file2) {
@@ -137,20 +138,20 @@ void search_in_file(const string& file1, const string& file2) {
     cout << "  Tiempo de normalización: " << norm_duration.count() << " segundos\n\n";
 
     auto start = chrono::high_resolution_clock::now();
-    double similarity = calculateLevenshteinSimilarity(normalized1, normalized2);
-    int maxLen = max(normalized1.size(), normalized2.size());
-    double lcs_length = (similarity / 100.0) * maxLen;
+    auto [similarity, dist] = calculateLevenshteinSimilarity(normalized1, normalized2);
     auto end = chrono::high_resolution_clock::now();
     chrono::duration<double> duration = end - start;
 
     cout << "RESULTADOS:\n";
     cout << "  Porcentaje de similitud (Levenshtein): " << fixed << setprecision(2)
          << similarity << "%\n";
+    cout << "  Distancia de edición: " << dist << "\n";
     cout << "  Tiempo de ejecución: " << duration.count() << " segundos\n";
     cout << "  Tiempo total (normalización + comparación): "
          << (norm_duration.count() + duration.count()) << " segundos\n";
-    cout << "  Longitud aproximada del LCS: " << fixed << setprecision(0)
-     << lcs_length << " caracteres\n\n";
+    cout << "  Nota: Este método no busca el substring común más largo, "
+            "sino que mide cuántas ediciones son necesarias para convertir un texto en otro.\n\n";
+
     cout << "                      CONCLUSIONES                           \n\n";
 
     if (similarity < 5.0) {
@@ -162,7 +163,6 @@ void search_in_file(const string& file1, const string& file2) {
     } else {
         cout << " Los textos son ALTAMENTE SIMILARES o derivados uno del otro.\n";
     }
-
 }
 
 int main() {
